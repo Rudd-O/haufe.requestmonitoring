@@ -41,11 +41,18 @@ It specifies the basename of the logfile;
 ".<date>" will be appended to this base.
 Then, "ITicket", "IInfo" adapters must be defined (e.g. the one
 from "info"). An "IStatus" adapter may be defined for response.
+
+If this logging is not activated via the product config, but
+"timelogging.zcml" is still included in your Zope configuration
+(the default if this product's ZCML is included), then a standard
+logging logger is used to log events, and events are written
+as INFO level log entries to that logger.
 """
 from .interfaces import IInfo
 from .interfaces import IStatus
 from .interfaces import ITicket
 from .Rotator import Rotator
+from logging import getLogger
 from threading import Lock
 from time import strftime
 from time import time
@@ -62,6 +69,9 @@ _log_time_format = '%y%m%dT%H%M%S'
 _lock = Lock()
 _state = {}
 _logfile = None
+
+
+_LOGGER = getLogger(__name__)
 
 
 def account_request(request, status=0):
@@ -92,17 +102,15 @@ def start_timelogging(unused):
     """start timelogging if configured."""
     from App.config import getConfiguration
     config = getConfiguration().product_config.get('timelogging')
-    if config is None:
-        return  # not configured
-    global _logfile
-    _logfile = Rotator(config['filebase'], lock=True)
-    # indicate restart
+    if config is not None:
+        global _logfile
+        _logfile = Rotator(config['filebase'], lock=True)
+        # indicate restart
     _log('0', info='restarted')
     # register publication observers
     provideHandler(handle_request_start)
     provideHandler(handle_request_success)
     provideHandler(handle_request_failure)
-
 
 @adapter(IPubStart)
 def handle_request_start(event):
@@ -148,13 +156,15 @@ def handle_request_failure(event):
 
 
 def _log(type, status=0, request_id=0, request_time=0, info=''):
-    _logfile.write(
-        _log_format % (
-            strftime(_log_time_format),
-            status,
-            request_time,
-            type,
-            request_id,
-            info,
-        )
+    string = _log_format % (
+        strftime(_log_time_format),
+        status,
+        request_time,
+        type,
+        request_id,
+        info,
     )
+    if _logfile is not None:
+        _logfile.write(string)
+    else:
+        _LOGGER.info(string.strip())
