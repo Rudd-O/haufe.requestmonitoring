@@ -31,7 +31,7 @@ from ZPublisher.interfaces import IPubEnd
 from ZPublisher.interfaces import IPubStart
 
 
-log = logging.getLogger('RequestMonitor')
+log = logging.getLogger(__name__)
 
 
 class Request:
