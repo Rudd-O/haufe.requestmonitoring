@@ -60,9 +60,12 @@ Following requests get request ids starting with ``1``.
 To activate this logging, both ``timelogging.zcml`` must be activated (on by
 default) and a ``product-config`` section with name ``timelogging`` must be
 defined containing the key ``filebase``.  It specifies the basename of the
-logfile; ``.<date>`` will be appended to this base.  Then, ``ITicket``,
-``IInfo`` adapters must be defined (e.g.  the one from ``info``).  An
-``IStatus`` adapter may be defined for response.
+logfile; ``.<date>`` will be appended to this base.  If the ``filebase``
+configuration path is ``/dev/stderr``, then the file will not be rotated,
+instead the logger will simply output to the standard logger at INFO level.
+
+Then, ``ITicket``, ``IInfo`` adapters must be defined (e.g.  the one from
+``info``).  An ``IStatus`` adapter may be defined for response.
 
 Example::
 

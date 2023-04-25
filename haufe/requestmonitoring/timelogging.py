@@ -36,9 +36,10 @@ request ids starting with "1".
 
 To activate this logging, both "timelogging.zcml" must be activated
 and a "product-config" section with name "timelogging" must be defined
-containing the key "filebase".
-It specifies the basename of the logfile;
-".<date>" will be appended to this base.
+containing the key "filebase".  It specifies the basename of the logfile;
+".<date>" will be appended to this base.  If "filebase" is `/dev/stderr`
+then the standard Python logger will be used instead of disk files.
+
 Then, "ITicket", "IInfo" adapters must be defined (e.g. the one
 from "info"). An "IStatus" adapter may be defined for response.
 
@@ -72,6 +73,7 @@ _logfile = None
 
 
 _LOGGER = getLogger(__name__)
+STDERR = "/dev/stderr"
 
 
 def account_request(request, status=0):
@@ -102,10 +104,15 @@ def start_timelogging(unused):
     """start timelogging if configured."""
     from App.config import getConfiguration
     config = getConfiguration().product_config.get('timelogging')
-    if config is not None:
-        global _logfile
+    if config is None:
+        return  # not configured
+
+    global _logfile
+    if config['filebase'] == STDERR:
+        _logfile = config['filebase']
+    else:
         _logfile = Rotator(config['filebase'], lock=True)
-        # indicate restart
+    # indicate restart
     _log('0', info='restarted')
     # register publication observers
     provideHandler(handle_request_start)
@@ -165,6 +172,7 @@ def _log(type, status=0, request_id=0, request_time=0, info=''):
         info,
     )
     if _logfile is not None:
-        _logfile.write(string)
-    else:
-        _LOGGER.info(string.strip())
+        if _logfile == STDERR:
+            _LOGGER.info(string.strip())
+        else:
+            _logfile.write(string)
